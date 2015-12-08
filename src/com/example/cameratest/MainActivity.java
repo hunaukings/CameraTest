@@ -129,8 +129,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Pre
        framenumber++;
        Log.i("jefry", "vedio data come ..."); 
        int size = onFrame(data,encodeout);
-	       if(size>0){
-	    	   onFramede(encodeout,size,0);
+	   if(size>0){
+	       size = onFramede(encodeout,size,0);
 	       if(starttime==0)
 	    	   starttime = System.currentTimeMillis();
 	       duration = System.currentTimeMillis() - starttime;
@@ -205,9 +205,12 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Pre
     }
     int mCount = 0;
     int FRAME_RATE = 25;
-    public void onFramede(byte[] buf, int length, int flag) {  
+    byte decodeout[] = new byte[width*height*3];
+    public int onFramede(byte[] buf, int length, int flag) {  
+    	int pos = 0;
     	try{
 	        ByteBuffer[] inputBuffers = mediaDecode.getInputBuffers();  
+	        ByteBuffer[] outputbuffers = mediaDecode.getOutputBuffers();
 	        int inputBufferIndex = mediaDecode.dequeueInputBuffer(-1);  
 	        if (inputBufferIndex >= 0) {  
 	            ByteBuffer inputBuffer = inputBuffers[inputBufferIndex];  
@@ -218,13 +221,16 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Pre
 	        }  
 	  
 	       MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();  
-	       int outputBufferIndex = mediaCodec.dequeueOutputBuffer(bufferInfo,0);  
+	       int outputBufferIndex = mediaDecode.dequeueOutputBuffer(bufferInfo,0);  
 	       while (outputBufferIndex >= 0) {  
+	    	   outputbuffers[outputBufferIndex].get(decodeout, pos, bufferInfo.size);
+	    	   pos += bufferInfo.size;
 	    	   mediaDecode.releaseOutputBuffer(outputBufferIndex, true);  
 	           outputBufferIndex = mediaDecode.dequeueOutputBuffer(bufferInfo, 0);  
 	       }  
     	}catch(Throwable t){
     		t.printStackTrace();
     	}
+    	return pos;
     }
 }  
