@@ -1,18 +1,14 @@
 package com.example.cameratest;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.ImageFormat;
-import android.graphics.Rect;
-import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.hardware.Camera.Parameters;
 import android.hardware.Camera.PreviewCallback;
@@ -20,7 +16,6 @@ import android.hardware.Camera.Size;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
-import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Surface;
@@ -35,8 +30,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Pre
     Camera camera ;  
     SurfaceView view;
     SurfaceView DisplayView;
-    private int width = 352;
-    private int height = 288;
+    private int width = 640;
+    private int height = 480;
     MediaCodec mediaCodec;
     MediaFormat mediaFormat;
     MediaCodec mediaDecode;
@@ -63,6 +58,16 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Pre
    
         mediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);  
  
+        short port = 3779;
+        try {
+			new NetClient("192.168.191.1",port);
+		} catch (SocketException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     }  
     public void surfaceCreated(SurfaceHolder holder) {  
     	if(holder==surfaceHolder){
@@ -97,11 +102,11 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Pre
     	}
     	else if(holder == DisplayHolder){
 	       try {
-            MediaFormat mediaformat = MediaFormat.createVideoFormat("video/avc", width, height);
+            MediaFormat mediaformat = MediaFormat.createVideoFormat("video/avc", height, width);
             mediaformat.setInteger(MediaFormat.KEY_COLOR_FORMAT,MediaCodecInfo.CodecCapabilities.COLOR_TI_FormatYUV420PackedSemiPlanar);      
             mediaDecode = MediaCodec.createDecoderByType("video/avc");
-           // mediaDecode.configure(mediaformat, DisplayHolder.getSurface(), null, 0);
-            mediaDecode.configure(mediaformat, null, null, 0);
+            mediaDecode.configure(mediaformat, DisplayHolder.getSurface(), null, 0);
+        //    mediaDecode.configure(mediaformat,null, null, 0);
             mediaDecode.start();
             }
             catch(Throwable t){
@@ -131,12 +136,13 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Pre
        int size = onFrame(data,encodeout);
 	   if(size>0){
 	       size = onFramede(encodeout,size,0);
+//	       MediaFormat    format = mediaDecode.;
 	       if(starttime==0)
 	    	   starttime = System.currentTimeMillis();
 	       duration = System.currentTimeMillis() - starttime;
 	       if(duration>0){
 	    	   float realfps = framenumber/duration;
-	    	   Log.w("encode-out", "size:"+size+"fps:"+realfps); 
+	    	   Log.w("encode-out", "size:"+size+";"+"fps:"+realfps); 
 	       }
        }
  //      offerEncoder(data,null,false,timestamp++);
@@ -168,7 +174,6 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Pre
 //       Log.e("Sys","display Cost Time:"+x);
     }
     @SuppressLint("NewApi")  
-    
 	public int onFrame(byte[] input, byte[] output) {  
     	 int pos = 0;  
   
@@ -222,11 +227,19 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Pre
 	  
 	       MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();  
 	       int outputBufferIndex = mediaDecode.dequeueOutputBuffer(bufferInfo,0);  
+	        if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+	    	     // Subsequent data will conform to new format.
+	    	     MediaFormat format = mediaDecode.getOutputFormat();
+	    	     Log.e("out format", "format:"+format.getInteger(MediaFormat.KEY_COLOR_FORMAT)); 
+	    	     Log.e("out format", "width:"+format.getInteger(MediaFormat.KEY_WIDTH)); 
+	    	     Log.e("out format", "height:"+format.getInteger(MediaFormat.KEY_HEIGHT)); 
+	    	   }
 	       while (outputBufferIndex >= 0) {  
-	    	   outputbuffers[outputBufferIndex].get(decodeout, pos, bufferInfo.size);
-	    	   pos += bufferInfo.size;
+	    	  // outputbuffers[outputBufferIndex].get(decodeout, pos, bufferInfo.size);
+	    	 //  pos += bufferInfo.size;
 	    	   mediaDecode.releaseOutputBuffer(outputBufferIndex, true);  
 	           outputBufferIndex = mediaDecode.dequeueOutputBuffer(bufferInfo, 0);  
+	       //    mediaDecode.setVideoScalingMode(arg0);
 	       }  
     	}catch(Throwable t){
     		t.printStackTrace();
